@@ -1,0 +1,5 @@
+Django>=5.2,<5.3
+gunicorn>=22.0
+scikit-learn==1.8.0
+numpy
+joblib

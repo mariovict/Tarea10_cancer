@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Predicción de cáncer de seno</title>
+<style>
+  :root {
+    --fondo: #f6f8f8; --papel: #ffffff; --texto: #1c2b2d; --suave: #5d6f72;
+    --linea: #d6dfe0; --acento: #0f6b6e; --maligno: #b3365a; --benigno: #2f7d57;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --fondo: #101a1b; --papel: #172426; --texto: #e6eeee; --suave: #9db0b2;
+            --linea: #2b3d3f; --acento: #4fb3b6; --maligno: #e0708f; --benigno: #5fc08c; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fondo); color: var(--texto);
+         font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 32px 20px 64px; }
+  h1 { font-size: 1.7rem; margin: 0 0 4px; }
+  p.sub { color: var(--suave); margin: 0 0 24px; max-width: 62ch; }
+  form, .resultados { background: var(--papel); border: 1px solid var(--linea);
+         border-radius: 8px; padding: 20px; margin-bottom: 24px; }
+  label { display: block; font-weight: 600; margin-bottom: 6px; }
+  textarea { width: 100%; min-height: 160px; padding: 10px; border-radius: 6px;
+         border: 1px solid var(--linea); background: var(--fondo); color: var(--texto);
+         font: 13px/1.4 ui-monospace, Menlo, Consolas, monospace; }
+  input[type=file] { margin: 6px 0 16px; }
+  .fila { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  button { background: var(--acento); color: #fff; border: 0; border-radius: 6px;
+         padding: 10px 18px; font-size: 1rem; cursor: pointer; }
+  button:focus-visible, a:focus-visible, textarea:focus-visible, input:focus-visible
+         { outline: 3px solid var(--acento); outline-offset: 2px; }
+  a { color: var(--acento); }
+  .ayuda { color: var(--suave); font-size: .9rem; margin: 6px 0 14px; }
+  .error { border-left: 4px solid var(--maligno); padding: 10px 14px; margin-bottom: 20px;
+         background: var(--papel); border-radius: 0 6px 6px 0; }
+  .tabla { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 560px; }
+  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--linea);
+         vertical-align: middle; }
+  th { font-size: .9rem; color: var(--suave); font-weight: 600; }
+  .dx-maligno { color: var(--maligno); font-weight: 700; }
+  .dx-benigno { color: var(--benigno); font-weight: 700; }
+  .barra { height: 8px; background: var(--linea); border-radius: 4px; overflow: hidden;
+         margin-top: 4px; min-width: 110px; }
+  .barra span { display: block; height: 100%; }
+  .m span { background: var(--maligno); } .b span { background: var(--benigno); }
+  details { margin-top: 12px; color: var(--suave); font-size: .9rem; }
+  .aviso { color: var(--suave); font-size: .85rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Predicción de cáncer de seno</h1>
+  <p class="sub">Modelo de regresión logística entrenado con el dataset Breast Cancer Wisconsin.
+     Ingresa uno o varios casos y obtén la probabilidad de cada clase.</p>
+
+  {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <label for="casos">Casos (una fila por caso, {{ n_features }} valores separados por comas)</label>
+    <textarea id="casos" name="casos" spellcheck="false">{{ texto }}</textarea>
+    <p class="ayuda">¿Sin datos a mano? <a href="?ejemplo=1">Cargar dos casos de ejemplo</a>.
+       Una primera fila con encabezados se ignora.</p>
+
+    <label for="archivo">O sube un archivo CSV</label>
+    <input type="file" id="archivo" name="archivo" accept=".csv,.txt">
+
+    <div class="fila"><button type="submit">Calcular probabilidades</button></div>
+
+    <details>
+      <summary>Orden de las {{ n_features }} columnas</summary>
+      <p>{{ nombres|join:", " }}</p>
+    </details>
+  </form>
+
+  {% if resultados %}
+  <section class="resultados" aria-live="polite">
+    <h2 style="margin-top:0">Resultados ({{ resultados|length }} caso{{ resultados|length|pluralize }})</h2>
+    <div class="tabla">
+      <table>
+        <thead><tr><th>Caso</th><th>Diagnóstico</th><th>Prob. maligno</th><th>Prob. benigno</th></tr></thead>
+        <tbody>
+        {% for r in resultados %}
+          <tr>
+            <td>{{ r.caso }}</td>
+            <td class="{% if r.es_maligno %}dx-maligno{% else %}dx-benigno{% endif %}">{{ r.diagnostico }}</td>
+            <td>{{ r.prob_maligno }}%<div class="barra m"><span style="width: {{ r.prob_maligno|stringformat:'.2f' }}%"></span></div></td>
+            <td>{{ r.prob_benigno }}%<div class="barra b"><span style="width: {{ r.prob_benigno|stringformat:'.2f' }}%"></span></div></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="aviso">Proyecto académico. Estos resultados no constituyen un diagnóstico médico.</p>
+  </section>
+  {% endif %}
+</main>
+</body>
+</html>
